@@ -1,0 +1,54 @@
+name: Enginehost FFmpeg
+
+# Builds FFmpeg as Enginehost configures it (enginehost/configure.sh) for the host and
+# both Android ABIs, and fails on anything enginehost/check.sh refuses: a component
+# outside enginehost/components.txt, any protocol, muxer, encoder, filter or device,
+# GPL or nonfree code, or a library without the hardening flags (Droidtop/tracker#906).
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: host
+          - target: android
+            abi: arm64-v8a
+          - target: android
+            abi: x86_64
+    name: ${{ matrix.target }} ${{ matrix.abi }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Tools
+        run: sudo apt-get update && sudo apt-get install -y nasm
+      - name: NDK r27c
+        if: matrix.target == 'android'
+        # Pinned so every build of a release uses the same compiler.
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.2.12479018" > /dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          ../enginehost/configure.sh ${{ matrix.target }} ${{ matrix.abi }} || { tail -40 ffbuild/config.log; exit 1; }
+      - name: Check the configuration
+        working-directory: build
+        run: ../enginehost/check.sh config
+      - name: Build
+        working-directory: build
+        run: make -j"$(nproc)"
+      - name: Check the libraries
+        working-directory: build
+        run: |
+          if [ "${{ matrix.target }}" = android ]; then
+            ../enginehost/check.sh libs "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          else
+            ../enginehost/check.sh libs
+          fi
