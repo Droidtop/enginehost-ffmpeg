@@ -57,13 +57,19 @@ libs)
 		found=1
 		ph=$("$readelf" -lW "$so")
 		dyn=$("$readelf" -dW "$so")
-		echo "$ph" | grep -q GNU_RELRO || bad "$so: no RELRO segment"
-		echo "$dyn" | grep -Eq 'BIND_NOW|FLAGS_1.*NOW' || bad "$so: not bound now (-z now)"
-		echo "$dyn" | grep -q TEXTREL && bad "$so: has text relocations"
-		echo "$ph" | grep GNU_STACK | grep -q 'RWE' && bad "$so: executable stack"
 		syms=$("$readelf" -sW --dyn-syms "$so")
-		echo "$syms" | grep -q '__stack_chk_fail' || bad "$so: no stack protector (__stack_chk_fail not referenced)"
-		echo "$syms" | grep -q '__[a-z0-9_]*_chk' || echo "check.sh: note: $so references no fortified (_chk) call"
+		# has TEXT PATTERN: grep fed from a here-document, not a pipe, so grep -q
+		# stopping at the first match never leaves a writer failing on a closed pipe.
+		has() { grep -Eq "$2" <<HAS
+$1
+HAS
+		}
+		has "$ph" 'GNU_RELRO' || bad "$so: no RELRO segment"
+		has "$dyn" 'BIND_NOW|FLAGS_1.*NOW' || bad "$so: not bound now (-z now)"
+		has "$dyn" 'TEXTREL' && bad "$so: has text relocations"
+		has "$ph" 'GNU_STACK.*RWE' && bad "$so: executable stack"
+		has "$syms" '__stack_chk_fail' || bad "$so: no stack protector (__stack_chk_fail not referenced)"
+		has "$syms" '__[a-z0-9_]*_chk' || echo "check.sh: note: $so references no fortified (_chk) call"
 		echo "check.sh: $so checked"
 	done
 	[ "$found" -eq 1 ] || bad "no shared libraries found under $(pwd)"
