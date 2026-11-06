@@ -1,0 +1,4 @@
+[submodule "enginehost/dav1d"]
+	path = enginehost/dav1d
+	url = https://github.com/videolan/dav1d
+	shallow = true

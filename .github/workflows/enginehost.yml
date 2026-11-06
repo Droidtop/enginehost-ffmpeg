@@ -26,8 +26,10 @@ jobs:
     name: ${{ matrix.target }} ${{ matrix.abi }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          submodules: true   # enginehost/dav1d, pinned to a release
       - name: Tools
-        run: sudo apt-get update && sudo apt-get install -y nasm
+        run: sudo apt-get update && sudo apt-get install -y nasm meson ninja-build pkg-config
       - name: NDK r27c
         if: matrix.target == 'android'
         # Pinned so every build of a release uses the same compiler.
@@ -52,3 +54,10 @@ jobs:
           else
             ../enginehost/check.sh libs
           fi
+      - name: AV1 smoke test
+        if: matrix.target == 'host'
+        working-directory: build
+        run: |
+          gcc -I. -I.. ../enginehost/tests/av1_smoke.c -Llibavcodec -Llibavutil -Llibswresample \
+              -lavcodec -lavutil -lswresample -o av1_smoke
+          LD_LIBRARY_PATH=libavcodec:libavutil:libswresample ./av1_smoke

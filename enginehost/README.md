@@ -14,6 +14,8 @@ Droidtop builds its own copy from the same branch for Wine games.
 | `components.txt` | the allow-list: the only decoders, demuxers, parsers and bitstream filters compiled in |
 | `configure.sh` | runs FFmpeg's configure for the host or one Android ABI: LGPL only, `--disable-everything` plus the allow-list, no protocols, network, devices, filters, encoders, muxers or programs, and the hardening flags |
 | `check.sh` | fails the build if the configuration or the built libraries break any of that |
+| `dav1d/` | dav1d, the AV1 decoder (BSD), a git submodule pinned to a release tag |
+| `tests/av1_smoke.c` | host smoke test: AV1 resolves to dav1d inside libavcodec and opens |
 | `../.github/workflows/enginehost.yml` | builds and checks the host, arm64-v8a and x86_64 |
 
 ## Decisions
@@ -24,10 +26,10 @@ Droidtop builds its own copy from the same branch for Wine games.
 - **No protocols at all**, not even `file`: the service reads input through its own `AVIOContext` over a descriptor the host hands it. No network, devices or filters.
 - **Hardening:** `-fstack-protector-strong`, `-D_FORTIFY_SOURCE=2`, PIC, full RELRO with `-z now`, no executable stack, no text relocations. `check.sh libs` asserts each of these on every built library.
 - **Toolchain:** NDK r27c (27.2.12479018), API 28, arm64-v8a and x86_64.
+- **AV1 through dav1d**, a git submodule (the owner's choice, 2026-11-06), pinned to a release tag (1.5.4). `configure.sh` builds it first, static, PIC and with the same hardening flags, and FFmpeg links it into libavcodec, so `check.sh libs` covers its code and it exports nothing. A new dav1d release is a submodule bump. Clone with `git submodule update --init`.
 
 ## Not here yet
 
-- AV1 in software through libdav1d (BSD), built as a dependency.
 - The MediaCodec hardware path.
 - The sandboxed service and its plugin-api glue.
 - Fuzzing with FFmpeg's own targets against this same configuration.

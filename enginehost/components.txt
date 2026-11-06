@@ -4,8 +4,9 @@
 #
 # Decoders: what the cores' games use (WMV/ASF, MPEG-1/2, Theora, VP8/9, Bink, Smacker,
 # H.264, HEVC, AAC, the common audio and PCM/ADPCM). H.264, HEVC and AAC are in on the
-# owner's word, 2026-11-05 ("include everything"). AV1 comes through libdav1d, added in
-# its own step; FFmpeg's native av1 decoder only drives hardware and is not listed.
+# owner's word, 2026-11-05 ("include everything"). AV1 is decoded by dav1d (BSD, the
+# submodule enginehost/dav1d); FFmpeg's native av1 decoder only drives hardware and is
+# not listed.
 
 decoder wmv1
 decoder wmv2
@@ -21,6 +22,7 @@ decoder mpeg2video
 decoder mpeg4
 decoder h264
 decoder hevc
+decoder libdav1d
 decoder theora
 # vp3: theora is built on it; configure turns it on for it.
 decoder vp3
